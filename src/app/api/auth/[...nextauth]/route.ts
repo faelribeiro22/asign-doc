@@ -19,7 +19,6 @@ export const authOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials?.email }
         })
-
         if (!user) throw new Error('Usuário não encontrado')
         if (!user.password) throw new Error('Senha não configurada')
 
@@ -42,19 +41,20 @@ export const authOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any; user?: { id: string } }) {
       if (user) {
         token.id = user.id
       }
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       session.user.id = token.id
+      session.user.email = token.email
       return session
     }
   },
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt' as const
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {

@@ -1,9 +1,10 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import {
   Card,
   CardContent,
@@ -12,10 +13,8 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Icons } from '@/components/ui/icons'
+import { Input } from '@/components/ui/input'
 import {
   Form,
   FormControl,
@@ -25,56 +24,47 @@ import {
   FormMessage
 } from '@/components/ui/form'
 import { toast } from 'sonner'
+import { Icons } from '@/components/ui/icons'
 
-// Esquema de validação com Zod
 const formSchema = z.object({
   email: z
     .string()
     .email('Digite um e-mail válido')
     .min(5, 'E-mail muito curto'),
-  password: z
-    .string()
-    .min(6, 'A senha deve ter pelo menos 6 caracteres')
-    .max(32, 'A senha não pode ter mais de 32 caracteres')
+  password: z.string().min(6, 'A senha deve ter pelo menos 6 caracteres')
 })
-
-type FormData = z.infer<typeof formSchema>
 
 export default function LoginPage() {
   const router = useRouter()
-
-  // Inicialização do React Hook Form com Zod
-  const form = useForm<FormData>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: ''
-    }
+    defaultValues: { email: '', password: '' }
   })
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      // Mostrar loading
-      const loadingToast = toast.loading('Processando login...')
-
-      // Simular uma requisição de login
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Aqui você faria a chamada real para sua API de autenticação
-      // const response = await fetch('/api/auth/login', { ... })
-
-      // Simulando login bem-sucedido
-      toast.success('Login realizado com sucesso!', {
-        id: loadingToast,
-        description: 'Você será redirecionado para o dashboard'
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: values.email,
+        password: values.password,
+        callbackUrl: '/documentos'
       })
 
-      router.push('/documentos')
-    } catch (err) {
+      if (result?.error) {
+        toast.error('Erro no login', { description: result.error })
+        console.log('error', result.error)
+      } else {
+        router.push('/documentos')
+      }
+    } catch (error) {
       toast.error('Erro no login', {
-        description: 'Credenciais inválidas. Por favor, tente novamente.'
+        description: 'Ocorreu um erro durante o login'
       })
     }
+  }
+
+  const handleOAuthLogin = (provider: 'google' | 'github') => {
+    signIn(provider, { callbackUrl: '/documentos' })
   }
 
   return (
@@ -90,7 +80,11 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid grid-cols-2 gap-6">
-            <Button variant="outline" disabled={form.formState.isSubmitting}>
+            <Button
+              variant="outline"
+              onClick={() => handleOAuthLogin('google')}
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting ? (
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -98,7 +92,11 @@ export default function LoginPage() {
               )}
               Google
             </Button>
-            <Button variant="outline" disabled={form.formState.isSubmitting}>
+            <Button
+              variant="outline"
+              onClick={() => handleOAuthLogin('github')}
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting ? (
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -117,7 +115,6 @@ export default function LoginPage() {
               </span>
             </div>
           </div>
-
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -130,7 +127,6 @@ export default function LoginPage() {
                       <Input
                         placeholder="seu@email.com"
                         type="email"
-                        autoComplete="email"
                         {...field}
                         disabled={form.formState.isSubmitting}
                       />
@@ -139,7 +135,6 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="password"
@@ -150,7 +145,6 @@ export default function LoginPage() {
                       <Input
                         placeholder="••••••••"
                         type="password"
-                        autoComplete="current-password"
                         {...field}
                         disabled={form.formState.isSubmitting}
                       />
@@ -159,7 +153,6 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-
               <Button
                 type="submit"
                 className="w-full"
@@ -174,21 +167,13 @@ export default function LoginPage() {
           </Form>
         </CardContent>
         <CardFooter className="flex flex-col items-center space-y-2">
-          <Button
-            variant="link"
-            className="text-sm"
-            disabled={form.formState.isSubmitting}
-          >
+          <Button variant="link" className="text-sm">
             Esqueceu sua senha?
           </Button>
           <div className="text-sm text-muted-foreground">
             Não tem uma conta?{' '}
-            <Button
-              variant="link"
-              className="p-0 text-sm"
-              disabled={form.formState.isSubmitting}
-            >
-              Cadastre-se
+            <Button variant="link" className="p-0 text-sm" asChild>
+              <a href="/registro">Cadastre-se</a>
             </Button>
           </div>
         </CardFooter>

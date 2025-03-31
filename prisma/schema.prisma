@@ -21,24 +21,32 @@ model User {
 }
 
 model Document {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  status    String   @default("PENDENTE")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-
-  Signature Signature[]
+  id          String     @id @default(cuid())
+  title       String
+  fileUrl     String     @unique
+  fileName    String
+  fileSize    Int
+  status      DocStatus  @default(PENDING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  signature   Signature?
 }
 
 model Signature {
-  id         String   @id @default(cuid())
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id])
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
-  signedAt   DateTime @default(now())
-  signature  String
+  id          String   @id @default(cuid())
+  documentId  String   @unique
+  document    Document @relation(fields: [documentId], references: [id])
+  signature   String   // Base64 da imagem da assinatura
+  signedAt    DateTime @default(now())
+  signedBy    String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+enum DocStatus {
+  PENDING
+  SIGNED
+  ARCHIVED
 }
